@@ -1,13 +1,10 @@
 package main
 
 import "github.com/go-gl/gl"
-import "math/rand"
+import "fmt"
 
-
-func readTexture3D(width int, height int, depth int, path string) (gl.Texture, error) {
-    gl.Enable(gl.TEXTURE_3D)
-    gl.TexEnvf(gl.TEXTURE_ENV, gl.TEXTURE_ENV_MODE, gl.REPLACE)
-
+func createTexture(width int, height int, depth int, pixels []float32) (gl.Texture, error) {
+    //gl.TexEnvf(gl.TEXTURE_ENV, gl.TEXTURE_ENV_MODE, gl.REPLACE)
     textureID := gl.GenTexture()
     textureID.Bind(gl.TEXTURE_3D)
 
@@ -18,15 +15,44 @@ func readTexture3D(width int, height int, depth int, path string) (gl.Texture, e
     gl.TexParameterf(gl.TEXTURE_3D, gl.TEXTURE_WRAP_T, gl.CLAMP)
     gl.TexParameterf(gl.TEXTURE_3D, gl.TEXTURE_WRAP_R, gl.CLAMP)
 
-    //pixels, _ := genPixelData(width, height, depth)
+    //pixels := make([]float32, width*height*depth)
+    //for x := 0; x<width; x++ {
+    //    for y := 0; y<height; y++ {
+    //        for z := 0; z<depth; z++ {
+    //            pixels[z*width*height + y*width + x] =
+    //            //pixels[z*width*height + x*height + y] =
+    //            //pixels[y*width*depth + z*width + x] =
+    //            //pixels[y*width*depth + x*depth + z] =
+    //            //pixels[x*height*depth + y*depth + z] =
+    //            //pixels[x*height*depth + z*height + y] =
+    //                data[z*width*height + y*width + x]
+    //                //data[z*width*height + x*height + y]
+    //                //data[y*width*depth + z*width + x]
+    //                //data[y*width*depth + x*depth + z]
+    //                //data[x*height*depth + y*depth + z]
+    //                //data[x*height*depth + z*height + y]
+    //        }
+    //    }
+    //}
 
-    pixels, _ := readVTKFile(path)
 
-    gl.TexImage3D(gl.TEXTURE_3D, 0, 1,
+    gl.TexImage3D(gl.TEXTURE_3D, 0, gl.R32F,
         width, height, depth, 0, gl.RED,
         gl.FLOAT, pixels)
 
     return textureID, nil
+}
+
+func readTexture3D(width int, height int, depth int, path string) (gl.Texture, error) {
+    _, data := readVTKFile(path)
+    return createTexture(width, height, depth, data)
+}
+
+func readTexture3DBinary(width int, height int, depth int, path string) (gl.Texture, error) {
+    fmt.Printf("Test1\n")
+    _, data := readVTKBinaryFile(path)
+    fmt.Printf("Test2\n")
+    return createTexture(width, height, depth, data)
 }
 
 func createProgram(vs string, fs string) (gl.Program, error) {
@@ -54,18 +80,4 @@ func createProgram(vs string, fs string) (gl.Program, error) {
 
     program.Use()
     return program, nil
-}
-
-func genPixelData(width int, height int, depth int) ([]float32, error) {
-    pixels := make([]float32, width*height*depth)
-
-    for x:= 0; x < width; x++ {
-        for y:= 0; y < height; y++ {
-            for z:= 0; z < depth; z++ {
-                pixels[z*width*height + y*width + x] = rand.Float32()
-            }
-        }
-    }
-
-    return pixels, nil
 }
