@@ -1,4 +1,5 @@
 *.sw*
+astro*
 test
 bin
 pkg
