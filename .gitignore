@@ -1,0 +1,4 @@
+*.sw*
+test
+bin
+pkg
