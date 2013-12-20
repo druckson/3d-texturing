@@ -39,20 +39,11 @@ func SetupTransferFunction() (gl.Texture) {
         t := (float32(i) - 255.0*float32(controlPointPositions[start])) /
                           (255.0*float32(controlPointPositions[end]) -
                            255.0*float32(controlPointPositions[start]))
-        //fmt.Printf("Transfer: %v\n", t);
 
         colors[4*i+0] = float32(controlPointColors[3*start+0])/255.0 + (t * (float32(controlPointColors[3*end+0])/255.0 - float32(controlPointColors[3*start+0])/255.0))
         colors[4*i+1] = float32(controlPointColors[3*start+1])/255.0 + (t * (float32(controlPointColors[3*end+1])/255.0 - float32(controlPointColors[3*start+1])/255.0))
         colors[4*i+2] = float32(controlPointColors[3*start+2])/255.0 + (t * (float32(controlPointColors[3*end+2])/255.0 - float32(controlPointColors[3*start+2])/255.0))
         colors[4*i+3] = float32(opacities[i])/255.0
-
-        fmt.Printf("Transfer: %v\n", colors[4*i+0]);
-        //fmt.Printf("Transfer: %v\n", t);
-
-        //colors[4*i+0] = 0.1;
-        //colors[4*i+1] = 0.0;
-        //colors[4*i+2] = 0.0;
-        //colors[4*i+3] = 0.1;//*float32(opacities[i])/255.0;
     }
 
     gl.TexImage1D(gl.TEXTURE_1D, 0, gl.RGBA, numBins, 0, gl.RGBA, gl.FLOAT, colors)
@@ -138,12 +129,6 @@ func CreateVolumetricRenderer() *VolumetricRenderer {
         }
 
         vec4 transferFunction(float value) {
-            //vec4 color = vec4(0);
-            //color += lerp4(vec4(0, 0, 0, 0), vec4(0, 0.1, 0, 0.01), delerp(11, 12, value));
-            //color += lerp4(vec4(0, 0, 0, 0), vec4(0.5, 0, 0, 0.08), delerp(12, 13.5, value));
-            ////color += lerp4(vec4(0, 0, 0, 0), vec4(1, 0, 0,   0.01), delerp(13.5, 15, value));
-            //return color;
-
             return texture1D(transferFunction, delerp(transferFunctionMin, transferFunctionMax, value));
         }
 
@@ -177,7 +162,7 @@ func CreateVolumetricRenderer() *VolumetricRenderer {
                 vec3 point = position + lerp3(ray*near, ray*far, float(i)/float(samples));
                 float value = sample(point);
                 if (value != 0.0) {
-                    color = mix(color, transferFunction(value), 0.000003*len/float(samples));
+                    color = mix(color, transferFunction(value), 0.000001*len/float(samples));
                 }
             }
             return color;
@@ -188,25 +173,15 @@ func CreateVolumetricRenderer() *VolumetricRenderer {
                               gl_TexCoord[0].t*float(height),
                               width, height);
             gl_FragColor = sampleRay(ray);
-
-            //gl_FragColor = texture1D(transferFunction, test);
-            //gl_FragColor = texture1D(transferFunction, 0.1);
-
-            //gl_FragColor = vec4(0.0);
-            //for (float t = 1.0; t>0.0; t-=0.01) {
-            //    float value = texture3D(volumeData, vec3(gl_TexCoord[0].t, gl_TexCoord[0].s, t)).r;
-            //    vec4 color = transferFunction(value);
-            //    gl_FragColor = mix(gl_FragColor, color, 10.0/float(samples));
-            //}
         }
     `)
 
 
-    dim := 256
-    vr.volumeDataTexture, _ = readTexture3DBinary(dim, dim, dim, "astro512.txt")
+    //dim := 256
+    //vr.volumeDataTexture, _ = readTexture3DBinary(dim, dim, dim, "astro512.txt")
 
-    //dim := 64
-    //vr.volumeDataTexture, _ = readTexture3D(dim, dim, dim, "astro64.txt")
+    dim := 64
+    vr.volumeDataTexture, _ = readTexture3D(dim, dim, dim, "astro64.txt")
 
     volumeData := vr.program.GetUniformLocation("volumeData")
     volumeData.Uniform1i(0)
@@ -223,7 +198,7 @@ func CreateVolumetricRenderer() *VolumetricRenderer {
     position.Uniform3f(-8.25e+7, -3.45e+7, 3.35e+7)
 
     up := vr.program.GetUniformLocation("up")
-    up.Uniform3f(0.0, 0.0, -1.0)
+    up.Uniform3f(0.0, -1.0, 0.0)
 
     focus := vr.program.GetUniformLocation("focus")
     focus.Uniform3f(0.0, 0.0, 0.0)
@@ -238,7 +213,7 @@ func CreateVolumetricRenderer() *VolumetricRenderer {
     far.Uniform1f(1.4e+8)
 
     samples := vr.program.GetUniformLocation("samples")
-    samples.Uniform1i(1000)
+    samples.Uniform1i(400)
 
     return vr
 }
