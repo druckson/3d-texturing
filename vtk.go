@@ -42,11 +42,13 @@ func readVTKFile(path string) ([]float32, []float32) {
 
 func readVTKBinaryFile(path string) ([]float32, []float32) {
     data := bytes.NewBuffer(readFile(path))
-
     nums := make([]float32, data.Len()/4)
 
     for i := 0; i<len(nums); i++ {
-        binary.Read(data, binary.LittleEndian, &nums[i])
+        err := binary.Read(data, binary.BigEndian, &nums[i])
+        if err != nil {
+            panic("Failed to read file")
+        }
     }
 
     return nil, nums
