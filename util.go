@@ -51,8 +51,27 @@ func readTexture3D(width int, height int, depth int, path string) (gl.Texture, e
 func readTexture3DBinary(width int, height int, depth int, path string) (gl.Texture, error) {
     fmt.Printf("Test1\n")
     _, data := readVTKBinaryFile(path)
-    fmt.Printf("Test2\n")
-    return createTexture(width, height, depth, data)
+    fmt.Printf("Test2 %v\n", len(data))
+
+    pixels := make([]float32, width*height*depth)
+
+    for x := 0; x<width; x++ {
+        for y := 0; y<height; y++ {
+            for z := 0; z<depth; z++ {
+                pixels[x*height*depth + y*depth + z] = (
+                    data[(2*x+0)*height*depth*4 + (2*y+0)*depth*2 + (2*z+0)] +
+                    data[(2*x+0)*height*depth*4 + (2*y+0)*depth*2 + (2*z+1)] +
+                    data[(2*x+0)*height*depth*4 + (2*y+1)*depth*2 + (2*z+0)] +
+                    data[(2*x+0)*height*depth*4 + (2*y+1)*depth*2 + (2*z+1)] +
+                    data[(2*x+1)*height*depth*4 + (2*y+0)*depth*2 + (2*z+0)] +
+                    data[(2*x+1)*height*depth*4 + (2*y+0)*depth*2 + (2*z+1)] +
+                    data[(2*x+1)*height*depth*4 + (2*y+1)*depth*2 + (2*z+0)] +
+                    data[(2*x+1)*height*depth*4 + (2*y+1)*depth*2 + (2*z+1)])/8.0
+            }
+        }
+    }
+
+    return createTexture(width, height, depth, pixels)
 }
 
 func createProgram(vs string, fs string) (gl.Program, error) {

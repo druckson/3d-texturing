@@ -47,6 +47,11 @@ func CreateVolumetricRenderer() *VolumetricRenderer {
         panic("Can't init glfw!")
     }
 
+    var size = make([]int32, 10);
+    size[0] = -1
+    gl.GetIntegerv(gl.MAX_3D_TEXTURE_SIZE, size)
+    fmt.Printf("Maximum texture size: %v\n", size[0]);
+
     vr.window, err = glfw.CreateWindow(300, 300, "Test", nil, nil)
     if err != nil {
         panic(err)
@@ -73,6 +78,7 @@ func CreateVolumetricRenderer() *VolumetricRenderer {
         uniform sampler1D transferFunction;
         uniform sampler3D volumeData;
         uniform vec3 position;
+
         uniform vec3 up;
         uniform vec3 focus;
         uniform float near;
@@ -88,16 +94,16 @@ func CreateVolumetricRenderer() *VolumetricRenderer {
             float offs = 3.02638 * pow(10.0, 7.0);
             float mult = offs * 2.0;
             pos = (pos + vec3(offs)) / mult;
-            if ((pos.x > 0.0) && (pos.x < 1.0) &&
-                (pos.y > 0.0) && (pos.y < 1.0) &&
-                (pos.z > 0.0) && (pos.z < 1.0))
+            if ((pos.r > 0.0) && (pos.r < 1.0) &&
+                (pos.g > 0.0) && (pos.g < 1.0) &&
+                (pos.b > 0.0) && (pos.b < 1.0))
                 {
                 return texture3D(volumeData, pos).r;
             }
             return 0.0;
         }
 
-        vec3 lerp(vec3 p1, vec3 p2, float t) {
+        vec3 lerp3(vec3 p1, vec3 p2, float t) {
             return p1 + ((p2 - p1) * t);
         }
 
@@ -106,38 +112,50 @@ func CreateVolumetricRenderer() *VolumetricRenderer {
         }
 
         float delerp(float v1, float v2, float v) {
+            v = max(v1, min(v2, v));
             return (v - v1) / (v2 - v1);
         }
 
-        vec4 transferFunction(float value, float dist) {
-            float t = delerp(0, 15, value);
-            return dist*lerp4(vec4(1, 0, 0, 0), vec4(0, 1, 0, 1), t);
-        }
-
-        vec4 mix(vec4 previousColor, vec4 newColor) {
-            
-            return previousColor + newColor;
+        vec4 transferFunction(float value) {
+            vec4 color = vec4(0);
+            color += lerp4(vec4(0, 0, 0, 0), vec4(0, 0.1, 0, 0.01), delerp(11, 12, value));
+            color += lerp4(vec4(0, 0, 0, 0), vec4(0.5, 0, 0, 0.08), delerp(12, 13.5, value));
+            //color += lerp4(vec4(0, 0, 0, 0), vec4(1, 0, 0,   0.01), delerp(13.5, 15, value));
+            return color;
         }
 
         vec3 getRay(float i, float j, int nx, int ny) {
             float pi = 3.1415926535897932384626433832795;
-            vec3 ru = normalize(-position * up);
-            vec3 rv = normalize(-position * ru);
-            vec3 rx = ru*(2.0*tan(angle*pi/360.0)/float(width));
-            vec3 ry = rv*(2.0*tan(angle*pi/360.0)/float(height));
+            vec3 ru = normalize(cross(-position, up));
+            vec3 rv = normalize(cross(-position, ru));
+
+            float hangle = angle;
+            float wangle = angle * float(width) / float(height);
+
+            vec3 rx = ru*(2.0*tan(wangle*pi/360.0)/float(width));
+            vec3 ry = rv*(2.0*tan(hangle*pi/360.0)/float(height));
 
             return normalize(-position) + 
                 (rx * ((2.0*i + 1.0 - float(width)) / 2.0)) +
                 (ry * ((2.0*j + 1.0 - float(height)) / 2.0));
         }
 
+        vec4 mix(vec4 color, vec4 sample, float dist) {
+            sample.a = sample.a * dist;
+            vec4 newColor = color * (1.0 - sample.a) + sample * sample.a;
+            newColor.a = color.a + (1.0 - color.a) * sample.a;
+            return newColor;
+        }
+
         vec4 sampleRay(vec3 ray) {
             vec4 color = vec4(0);
             float len = length(ray) * (far - near);
             for (int i=0; i<samples; i++) {
-                vec3 point = lerp(ray*near, ray*far, float(i)/float(samples));
+                vec3 point = position + lerp3(ray*near, ray*far, float(i)/float(samples));
                 float value = sample(point);
-                color += transferFunction(value, 0.00000001*len/float(samples));
+                if (value != 0.0) {
+                    color = mix(color, transferFunction(value), 0.00001*len/float(samples));
+                }
             }
             return color;
         }
@@ -146,29 +164,23 @@ func CreateVolumetricRenderer() *VolumetricRenderer {
             vec3 ray = getRay(gl_TexCoord[0].s*float(width),
                               gl_TexCoord[0].t*float(height),
                               width, height);
-
             gl_FragColor = sampleRay(ray);
-            //gl_FragColor.rgb = ray;
 
             //gl_FragColor = vec4(0.0);
-            //for (float t = 0.0; t<1.0; t+=0.01) {
-            //    float value = texture3D(volumeData, vec3(t, gl_TexCoord[0].t, gl_TexCoord[0].s)).r;
-
-            //    
-            //    vec4 color = transferFunction(value, 1.0/float(width));
-            //    gl_FragColor = mix(gl_FragColor, color);
+            //for (float t = 1.0; t>0.0; t-=0.01) {
+            //    float value = texture3D(volumeData, vec3(gl_TexCoord[0].t, gl_TexCoord[0].s, t)).r;
+            //    vec4 color = transferFunction(value);
+            //    gl_FragColor = mix(gl_FragColor, color, 10.0/float(samples));
             //}
-
-            //vec4 color = texture3D(volumeData, vec3(test, gl_TexCoord[0].t, gl_TexCoord[0].s));
-            //gl_FragColor = color * 0.1;
         }
     `)
 
 
-    //dim := 512
-    //vr.volumeDataTexture, _ = readTexture3DBinary(dim, dim, dim, "astro512.txt")
-    dim := 64
-    vr.volumeDataTexture, _ = readTexture3D(dim, dim, dim, "astro64.txt")
+    dim := 256
+    vr.volumeDataTexture, _ = readTexture3DBinary(dim, dim, dim, "astro512.txt")
+
+    //dim := 64
+    //vr.volumeDataTexture, _ = readTexture3D(dim, dim, dim, "astro64.txt")
 
     vr.volumeData = vr.program.GetUniformLocation("volumeData")
     vr.volumeData.Uniform1i(0)
@@ -192,7 +204,7 @@ func CreateVolumetricRenderer() *VolumetricRenderer {
     vr.far.Uniform1f(1.4e+8)
 
     vr.samples = vr.program.GetUniformLocation("samples")
-    vr.samples.Uniform1i(100)
+    vr.samples.Uniform1i(300)
 
     return vr
 }
@@ -215,10 +227,13 @@ func (vr *VolumetricRenderer) Draw() {
     gl.MatrixMode(gl.MODELVIEW)
     gl.LoadIdentity()
 
-    t += 0.01;
-    fmt.Printf("Test %v\n", math.Sin(t))
+    t += 0.03
+    test := float32(math.Sin(t) + 1.0) * 0.5
     vr.test = vr.program.GetUniformLocation("test")
-    vr.test.Uniform1f(float32(math.Sin(t) / 2.0 + 0.5))
+    vr.test.Uniform1f(test)
+    vr.position = vr.program.GetUniformLocation("position")
+    dist := math.Sqrt(8.25e+7*8.25e+7 + 3.45e+7*3.45e+7 + 3.35e+7*3.35e+7)
+    vr.position.Uniform3f(float32(dist*math.Sin(t)), 1.0e+7, float32(dist*math.Cos(t)))
 
     gl.ActiveTexture(gl.TEXTURE0)
 
