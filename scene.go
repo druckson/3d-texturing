@@ -15,26 +15,57 @@ func SetWindowSize(window *glfw.Window, width int, height int) {
     _vr.SetSize(width, height)
 }
 
+func SetupTransferFunction() (gl.Texture) {
+    texture := gl.GenTexture()
+    texture.Bind(gl.TEXTURE_1D)
+
+    gl.TexParameteri(gl.TEXTURE_1D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
+    gl.TexParameteri(gl.TEXTURE_1D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
+    gl.TexParameterf(gl.TEXTURE_1D, gl.TEXTURE_WRAP_S, gl.CLAMP)
+
+    numBins := 256
+
+    colors := make([]float32, 4*numBins)
+
+    opacities := [256]int{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 2, 2, 3, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 13, 14, 14, 14, 14, 14, 14, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 5, 4, 3, 2, 3, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 17, 17, 17, 17, 17, 17, 16, 16, 15, 14, 13, 12, 11, 9, 8, 7, 6, 5, 5, 4, 3, 3, 3, 4, 5, 6, 7, 8, 9, 11, 12, 14, 16, 18, 20, 22, 24, 27, 29, 32, 35, 38, 41, 44, 47, 50, 52, 55, 58, 60, 62, 64, 66, 67, 68, 69, 70, 70, 70, 69, 68, 67, 66, 64, 62, 60, 58, 55, 52, 50, 47, 44, 41, 38, 35, 32, 29, 27, 24, 22, 20, 20, 23, 28, 33, 38, 45, 51, 59, 67, 76, 85, 95, 105, 116, 127, 138, 149, 160, 170, 180, 189, 198, 205, 212, 217, 221, 223, 224, 224, 222, 219, 214, 208, 201, 193, 184, 174, 164, 153, 142, 131, 120, 109, 99, 89, 79, 70, 62, 54, 47, 40, 35, 30, 25, 21, 17, 14, 12, 10, 8, 6, 5, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+
+    controlPointColors := []int{ 71, 71, 219, 0, 0, 91, 0, 255, 255, 0, 127, 0, 255, 255, 0, 255, 96, 0, 107, 0, 0, 224, 76, 76 }
+    controlPointPositions := []float32{ 0.0, 0.143, 0.285, 0.429, 0.571, 0.714, 0.857, 1.0 }
+
+    for i:=0; i<numBins; i++ {
+        end := 0
+        for ; int(256.0*controlPointPositions[end])<=i; end++ {}
+        start := end-1
+        t := (float32(i) - 255.0*float32(controlPointPositions[start])) /
+                          (255.0*float32(controlPointPositions[end]) -
+                           255.0*float32(controlPointPositions[start]))
+        //fmt.Printf("Transfer: %v\n", t);
+
+        colors[4*i+0] = float32(controlPointColors[3*start+0])/255.0 + (t * (float32(controlPointColors[3*end+0])/255.0 - float32(controlPointColors[3*start+0])/255.0))
+        colors[4*i+1] = float32(controlPointColors[3*start+1])/255.0 + (t * (float32(controlPointColors[3*end+1])/255.0 - float32(controlPointColors[3*start+1])/255.0))
+        colors[4*i+2] = float32(controlPointColors[3*start+2])/255.0 + (t * (float32(controlPointColors[3*end+2])/255.0 - float32(controlPointColors[3*start+2])/255.0))
+        colors[4*i+3] = float32(opacities[i])/255.0
+
+        fmt.Printf("Transfer: %v\n", colors[4*i+0]);
+        //fmt.Printf("Transfer: %v\n", t);
+
+        //colors[4*i+0] = 0.1;
+        //colors[4*i+1] = 0.0;
+        //colors[4*i+2] = 0.0;
+        //colors[4*i+3] = 0.1;//*float32(opacities[i])/255.0;
+    }
+
+    gl.TexImage1D(gl.TEXTURE_1D, 0, gl.RGBA, numBins, 0, gl.RGBA, gl.FLOAT, colors)
+
+    return texture
+}
+
 type VolumetricRenderer struct {
     window *glfw.Window
     program gl.Program
 
     volumeDataTexture gl.Texture
-
-    volumeData gl.UniformLocation
-    width gl.UniformLocation
-    height gl.UniformLocation
-    samples gl.UniformLocation
-
-    test gl.UniformLocation
-
-    angle gl.UniformLocation
-    near gl.UniformLocation
-    far gl.UniformLocation
-
-    position gl.UniformLocation
-    up gl.UniformLocation
-    focus gl.UniformLocation
+    transferFunctionTexture gl.Texture
 }
 
 func CreateVolumetricRenderer() *VolumetricRenderer {
@@ -47,11 +78,6 @@ func CreateVolumetricRenderer() *VolumetricRenderer {
         panic("Can't init glfw!")
     }
 
-    var size = make([]int32, 10);
-    size[0] = -1
-    gl.GetIntegerv(gl.MAX_3D_TEXTURE_SIZE, size)
-    fmt.Printf("Maximum texture size: %v\n", size[0]);
-
     vr.window, err = glfw.CreateWindow(300, 300, "Test", nil, nil)
     if err != nil {
         panic(err)
@@ -61,14 +87,6 @@ func CreateVolumetricRenderer() *VolumetricRenderer {
     vr.window.MakeContextCurrent()
     gl.Init()
 
-    gl.ClearColor(0.5, 0.5, 0.5, 0)
-
-    //gl.Viewport(0, 0, 100, 100)
-    gl.MatrixMode(gl.PROJECTION)
-    gl.LoadIdentity()
-    gl.MatrixMode(gl.MODELVIEW)
-    gl.LoadIdentity()
-
     vr.program, _ = createProgram(`
         void main() {
             gl_TexCoord[0] = gl_MultiTexCoord0;
@@ -76,6 +94,9 @@ func CreateVolumetricRenderer() *VolumetricRenderer {
         }
     `, `
         uniform sampler1D transferFunction;
+        uniform float transferFunctionMin;
+        uniform float transferFunctionMax;
+
         uniform sampler3D volumeData;
         uniform vec3 position;
 
@@ -117,11 +138,13 @@ func CreateVolumetricRenderer() *VolumetricRenderer {
         }
 
         vec4 transferFunction(float value) {
-            vec4 color = vec4(0);
-            color += lerp4(vec4(0, 0, 0, 0), vec4(0, 0.1, 0, 0.01), delerp(11, 12, value));
-            color += lerp4(vec4(0, 0, 0, 0), vec4(0.5, 0, 0, 0.08), delerp(12, 13.5, value));
-            //color += lerp4(vec4(0, 0, 0, 0), vec4(1, 0, 0,   0.01), delerp(13.5, 15, value));
-            return color;
+            //vec4 color = vec4(0);
+            //color += lerp4(vec4(0, 0, 0, 0), vec4(0, 0.1, 0, 0.01), delerp(11, 12, value));
+            //color += lerp4(vec4(0, 0, 0, 0), vec4(0.5, 0, 0, 0.08), delerp(12, 13.5, value));
+            ////color += lerp4(vec4(0, 0, 0, 0), vec4(1, 0, 0,   0.01), delerp(13.5, 15, value));
+            //return color;
+
+            return texture1D(transferFunction, delerp(transferFunctionMin, transferFunctionMax, value));
         }
 
         vec3 getRay(float i, float j, int nx, int ny) {
@@ -154,7 +177,7 @@ func CreateVolumetricRenderer() *VolumetricRenderer {
                 vec3 point = position + lerp3(ray*near, ray*far, float(i)/float(samples));
                 float value = sample(point);
                 if (value != 0.0) {
-                    color = mix(color, transferFunction(value), 0.00001*len/float(samples));
+                    color = mix(color, transferFunction(value), 0.000003*len/float(samples));
                 }
             }
             return color;
@@ -165,6 +188,9 @@ func CreateVolumetricRenderer() *VolumetricRenderer {
                               gl_TexCoord[0].t*float(height),
                               width, height);
             gl_FragColor = sampleRay(ray);
+
+            //gl_FragColor = texture1D(transferFunction, test);
+            //gl_FragColor = texture1D(transferFunction, 0.1);
 
             //gl_FragColor = vec4(0.0);
             //for (float t = 1.0; t>0.0; t-=0.01) {
@@ -182,39 +208,47 @@ func CreateVolumetricRenderer() *VolumetricRenderer {
     //dim := 64
     //vr.volumeDataTexture, _ = readTexture3D(dim, dim, dim, "astro64.txt")
 
-    vr.volumeData = vr.program.GetUniformLocation("volumeData")
-    vr.volumeData.Uniform1i(0)
+    volumeData := vr.program.GetUniformLocation("volumeData")
+    volumeData.Uniform1i(0)
 
-    vr.position = vr.program.GetUniformLocation("position")
-    vr.position.Uniform3f(-8.25e+7, -3.45e+7, 3.35e+7)
+    vr.transferFunctionTexture = SetupTransferFunction()
 
-    vr.up = vr.program.GetUniformLocation("up")
-    vr.up.Uniform3f(0.0, 0.0, -1.0)
+    transferFunctionMin := vr.program.GetUniformLocation("transferFunctionMin")
+    transferFunctionMin.Uniform1f(10.0)
 
-    vr.focus = vr.program.GetUniformLocation("focus")
-    vr.focus.Uniform3f(0.0, 0.0, 0.0)
+    transferFunctionMax := vr.program.GetUniformLocation("transferFunctionMax")
+    transferFunctionMax.Uniform1f(15.0)
 
-    vr.angle = vr.program.GetUniformLocation("angle")
-    vr.angle.Uniform1f(30.0)
+    position := vr.program.GetUniformLocation("position")
+    position.Uniform3f(-8.25e+7, -3.45e+7, 3.35e+7)
 
-    vr.near = vr.program.GetUniformLocation("near")
-    vr.near.Uniform1f(7.5e+7)
+    up := vr.program.GetUniformLocation("up")
+    up.Uniform3f(0.0, 0.0, -1.0)
 
-    vr.far = vr.program.GetUniformLocation("far")
-    vr.far.Uniform1f(1.4e+8)
+    focus := vr.program.GetUniformLocation("focus")
+    focus.Uniform3f(0.0, 0.0, 0.0)
 
-    vr.samples = vr.program.GetUniformLocation("samples")
-    vr.samples.Uniform1i(300)
+    angle := vr.program.GetUniformLocation("angle")
+    angle.Uniform1f(30.0)
+
+    near := vr.program.GetUniformLocation("near")
+    near.Uniform1f(7.5e+7)
+
+    far := vr.program.GetUniformLocation("far")
+    far.Uniform1f(1.4e+8)
+
+    samples := vr.program.GetUniformLocation("samples")
+    samples.Uniform1i(1000)
 
     return vr
 }
 
-func (vr *VolumetricRenderer) SetSize(width int, height int) {
-    vr.width = vr.program.GetUniformLocation("width");
-    vr.width.Uniform1i(width)
-    vr.height = vr.program.GetUniformLocation("height");
-    vr.height.Uniform1i(height)
-    gl.Viewport(0, 0, width, height)
+func (vr *VolumetricRenderer) SetSize(w int, h int) {
+    width := vr.program.GetUniformLocation("width");
+    width.Uniform1i(w)
+    height := vr.program.GetUniformLocation("height");
+    height.Uniform1i(h)
+    gl.Viewport(0, 0, w, h)
 }
 
 var t float64 = 0.0;
@@ -228,20 +262,24 @@ func (vr *VolumetricRenderer) Draw() {
     gl.LoadIdentity()
 
     t += 0.03
-    test := float32(math.Sin(t) + 1.0) * 0.5
-    vr.test = vr.program.GetUniformLocation("test")
-    vr.test.Uniform1f(test)
-    vr.position = vr.program.GetUniformLocation("position")
+    test := vr.program.GetUniformLocation("test")
+    test.Uniform1f(float32(math.Sin(t) + 1.0) * 0.5)
+    position := vr.program.GetUniformLocation("position")
     dist := math.Sqrt(8.25e+7*8.25e+7 + 3.45e+7*3.45e+7 + 3.35e+7*3.35e+7)
-    vr.position.Uniform3f(float32(dist*math.Sin(t)), 1.0e+7, float32(dist*math.Cos(t)))
+    position.Uniform3f(float32(dist*math.Sin(t)), 1.0e+7, float32(dist*math.Cos(t)))
 
     gl.ActiveTexture(gl.TEXTURE0)
 
-    vr.volumeData = vr.program.GetUniformLocation("volumeData")
-    vr.volumeData.Uniform1i(0)
-
+    volumeData := vr.program.GetUniformLocation("volumeData")
+    volumeData.Uniform1i(0)
     vr.volumeDataTexture.Bind(gl.TEXTURE_3D)
     gl.Enable(gl.TEXTURE_3D)
+
+    gl.ActiveTexture(gl.TEXTURE1)
+    transferFunction := vr.program.GetUniformLocation("transferFunction")
+    transferFunction.Uniform1i(1)
+    vr.transferFunctionTexture.Bind(gl.TEXTURE_1D)
+    gl.Enable(gl.TEXTURE_1D)
 
     vr.program.Use()
 
