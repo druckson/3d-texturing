@@ -4,7 +4,8 @@ import ("strconv"
         "os"
         "strings"
         "encoding/binary"
-        "bytes")
+        "bytes"
+        "fmt")
 
 func readFile(path string) []byte {
     file, err := os.Open(path)
@@ -27,8 +28,8 @@ func readFile(path string) []byte {
     return data
 }
 
-func readVTKFile(path string) ([]float32, []float32) {
-    data := strings.Split(strings.Join(strings.Split(string(readFile(path)), "\n"), ""), " ");
+func readVTKTextData(lines []string) ([]float32) {
+    data := strings.Split(strings.TrimRight(strings.Join(lines, ""), " "), " ");
 
     nums := make([]float32, len(data))
 
@@ -37,11 +38,11 @@ func readVTKFile(path string) ([]float32, []float32) {
         nums[i] = float32(num)
     }
 
-    return nil, nums
+    return nums
 }
 
-func readVTKBinaryFile(path string) ([]float32, []float32) {
-    data := bytes.NewBuffer(readFile(path))
+func readVTKBinaryData(lines []string) ([]float32) {
+    data := bytes.NewBuffer([]byte(strings.Join(lines, "\n")))
     nums := make([]float32, data.Len()/4)
 
     for i := 0; i<len(nums); i++ {
@@ -51,5 +52,46 @@ func readVTKBinaryFile(path string) ([]float32, []float32) {
         }
     }
 
-    return nil, nums
+    return nums
+}
+
+func readVTKFile(path string) (*ScalarField, error) {
+    lines := strings.Split(string(readFile(path)), "\n");
+
+    var i, w, h, d int
+    var line string
+    var bin bool
+    for i, line = range lines {
+        if line == "ASCII" {
+            fmt.Printf("Ascii file\n")
+            bin = false
+        } else if line == "ASCII" {
+            fmt.Printf("Binary file\n")
+            bin = true
+        } else if len(line) >= 12 && line[:12] == "LOOKUP_TABLE" {
+            fmt.Printf("Lookup Table\n")
+            break
+        } else if len(line) >= 10 &&  line[:10] == "DIMENSIONS" {
+            dims := strings.Split(line, " ")
+            fmt.Printf("Dimensions: %v\n", dims)
+            x, _ := strconv.ParseInt(dims[1], 10, 32)
+            y, _ := strconv.ParseInt(dims[2], 10, 32)
+            z, _ := strconv.ParseInt(dims[3], 10, 32)
+            w = int(x)
+            h = int(y)
+            d = int(z)
+        }
+    }
+
+    var data []float32
+    if bin {
+        data = readVTKBinaryData(lines[i:])
+    } else {
+        data = readVTKTextData(lines[i+1:])
+    }
+
+    sf, _ := NewScalarField(w, h, d)
+    sf.SetData(data)
+
+    return sf, nil
 }
