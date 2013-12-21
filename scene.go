@@ -57,11 +57,14 @@ type VolumetricRenderer struct {
 
     volumeDataTexture gl.Texture
     transferFunctionTexture gl.Texture
+    scalarField *ScalarField
+    dist float32
 }
 
-func CreateVolumetricRenderer() *VolumetricRenderer {
+func CreateVolumetricRenderer(sf *ScalarField, min float32, max float32, dist float32) *VolumetricRenderer {
     var err error;
     vr := new(VolumetricRenderer)
+    vr.scalarField = sf
     _vr = vr
     glfw.SetErrorCallback(ErrorCallback)
 
@@ -176,12 +179,15 @@ func CreateVolumetricRenderer() *VolumetricRenderer {
         }
     `)
 
+    vr.dist = dist
+
 
     //dim := 256
     //vr.volumeDataTexture, _ = readTexture3DBinary(dim, dim, dim, "astro512.txt")
 
-    dim := 64
-    vr.volumeDataTexture, _ = readTexture3D(dim, dim, dim, "astro64.txt")
+    //dim := 64
+    //vr.volumeDataTexture, _ = readTexture3D(dim, dim, dim, "astro64.txt")
+    vr.volumeDataTexture, _ = sf.CreateTexture()
 
     volumeData := vr.program.GetUniformLocation("volumeData")
     volumeData.Uniform1i(0)
@@ -189,10 +195,10 @@ func CreateVolumetricRenderer() *VolumetricRenderer {
     vr.transferFunctionTexture = SetupTransferFunction()
 
     transferFunctionMin := vr.program.GetUniformLocation("transferFunctionMin")
-    transferFunctionMin.Uniform1f(10.0)
+    transferFunctionMin.Uniform1f(min)
 
     transferFunctionMax := vr.program.GetUniformLocation("transferFunctionMax")
-    transferFunctionMax.Uniform1f(15.0)
+    transferFunctionMax.Uniform1f(max)
 
     position := vr.program.GetUniformLocation("position")
     position.Uniform3f(-8.25e+7, -3.45e+7, 3.35e+7)
@@ -240,8 +246,8 @@ func (vr *VolumetricRenderer) Draw() {
     test := vr.program.GetUniformLocation("test")
     test.Uniform1f(float32(math.Sin(t) + 1.0) * 0.5)
     position := vr.program.GetUniformLocation("position")
-    dist := math.Sqrt(8.25e+7*8.25e+7 + 3.45e+7*3.45e+7 + 3.35e+7*3.35e+7)
-    position.Uniform3f(float32(dist*math.Sin(t)), 1.0e+7, float32(dist*math.Cos(t)))
+    //dist := math.Sqrt(8.25e+7*8.25e+7 + 3.45e+7*3.45e+7 + 3.35e+7*3.35e+7)
+    position.Uniform3f(vr.dist*float32(math.Sin(t)), 0, vr.dist*float32(math.Cos(t)))
 
     gl.ActiveTexture(gl.TEXTURE0)
 
