@@ -131,10 +131,6 @@ func CreateVolumetricRenderer(sf *ScalarField, min float32, max float32, sampleC
             return (v - v1) / (v2 - v1);
         }
 
-        vec4 transferFunction(float value) {
-            return texture1D(transferFunction, delerp(transferFunctionMin, transferFunctionMax, value));
-        }
-
         vec3 getRay(float i, float j, int nx, int ny) {
             float pi = 3.1415926535897932384626433832795;
             vec3 ru = normalize(cross(-position, up));
@@ -151,6 +147,10 @@ func CreateVolumetricRenderer(sf *ScalarField, min float32, max float32, sampleC
                 (ry * ((2.0*j + 1.0 - float(height)) / 2.0));
         }
 
+        vec4 transferFunction(float value) {
+            return texture1D(transferFunction, delerp(transferFunctionMin, transferFunctionMax, value));
+        }
+
         vec4 mix(vec4 color, vec4 sample, float dist) {
             sample.a = sample.a * dist;
             vec4 newColor = color * (1.0 - sample.a) + sample * sample.a;
@@ -158,16 +158,50 @@ func CreateVolumetricRenderer(sf *ScalarField, min float32, max float32, sampleC
             return newColor;
         }
 
+        float alphaFunction(float value) {
+            return texture1D(transferFunction, delerp(transferFunctionMin, transferFunctionMax, value)).a;
+        }
+
+        float mix(float alpha, float sample, float dist) {
+            return alpha + (1.0 - alpha) * sample;
+        }
+
         vec4 sampleRay(vec3 ray) {
-            vec4 color = vec4(0);
             float len = length(ray) * (far - near);
-            for (int i=0; i<samples; i++) {
-                vec3 point = position + lerp3(ray*far, ray*near, float(i)/float(samples));
+            float thickness = 0.000001*len/float(samples);
+
+            int start = 0;
+            int end = samples;
+
+            // Cull unnecessary samples
+            //float alpha = 0.0;
+            //for (int i=0; i<samples; i++) {
+            //    vec3 point = position + lerp3(ray*near, ray*far, float(i)/float(samples));
+            //    float value = sample(point);
+            //    alpha = mix(alpha, alphaFunction(value), thickness);
+
+            //    if (start == 0 && alpha > 0.0) {
+            //        start = i;
+            //    }
+            //    if (alpha > 0.99999) {
+            //        end = i;
+            //        break;
+            //    }
+            //}
+
+            vec4 color = vec4(0);
+            for (int i=end; i>start; i--) {
+                vec3 point = position + lerp3(ray*near, ray*far, float(i)/float(samples));
                 float value = sample(point);
-                if (value != 0.0) {
-                    color = mix(color, transferFunction(value), 0.000001*len/float(samples));
-                }
+                color = mix(color, transferFunction(value), thickness);
             }
+
+            //vec4 color = vec4(0);
+            //for (int i=samples-1; i>=0; i--) {
+            //    vec3 point = position + lerp3(ray*far, ray*near, float(i)/float(samples));
+            //    float value = sample(point);
+            //    color = mix(color, transferFunction(value), thickness);
+            //}
             return color;
         }
 
