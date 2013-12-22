@@ -99,9 +99,10 @@ func CreateVolumetricRenderer(sf *ScalarField, min float32, max float32, sampleC
         uniform float near;
         uniform float far;
         uniform float angle;
-        uniform int width;
-        uniform int height;
+        uniform int screenWidth;
+        uniform int screenHeight;
         uniform int samples;
+
 
         uniform float test;
 
@@ -137,14 +138,14 @@ func CreateVolumetricRenderer(sf *ScalarField, min float32, max float32, sampleC
             vec3 rv = normalize(cross(-position, ru));
 
             float hangle = angle;
-            float wangle = angle * float(width) / float(height);
+            float wangle = angle * float(screenWidth) / float(screenHeight);
 
-            vec3 rx = ru*(2.0*tan(wangle*pi/360.0)/float(width));
-            vec3 ry = rv*(2.0*tan(hangle*pi/360.0)/float(height));
+            vec3 rx = ru*(2.0*tan(wangle*pi/360.0)/float(screenWidth));
+            vec3 ry = rv*(2.0*tan(hangle*pi/360.0)/float(screenHeight));
 
             return normalize(-position) + 
-                (rx * ((2.0*i + 1.0 - float(width)) / 2.0)) +
-                (ry * ((2.0*j + 1.0 - float(height)) / 2.0));
+                (rx * ((2.0*i + 1.0 - float(screenWidth)) / 2.0)) +
+                (ry * ((2.0*j + 1.0 - float(screenHeight)) / 2.0));
         }
 
         vec4 transferFunction(float value) {
@@ -206,9 +207,9 @@ func CreateVolumetricRenderer(sf *ScalarField, min float32, max float32, sampleC
         }
 
         void main(void) {
-            vec3 ray = getRay(gl_TexCoord[0].s*float(width),
-                              gl_TexCoord[0].t*float(height),
-                              width, height);
+            vec3 ray = getRay(gl_TexCoord[0].s*float(screenWidth),
+                              gl_TexCoord[0].t*float(screenHeight),
+                              screenWidth, screenHeight);
             gl_FragColor = sampleRay(ray);
         }
     `)
@@ -259,9 +260,9 @@ func CreateVolumetricRenderer(sf *ScalarField, min float32, max float32, sampleC
 }
 
 func (vr *VolumetricRenderer) SetSize(w int, h int) {
-    width := vr.program.GetUniformLocation("width");
+    width := vr.program.GetUniformLocation("screenWidth");
     width.Uniform1i(w)
-    height := vr.program.GetUniformLocation("height");
+    height := vr.program.GetUniformLocation("screenHeight");
     height.Uniform1i(h)
     gl.Viewport(0, 0, w, h)
 }
