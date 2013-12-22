@@ -179,7 +179,7 @@ func CreateVolumetricRenderer(sf *ScalarField, min float32, max float32, samples
 
         vec4 sampleRay(vec3 ray) {
             float len = length(ray) * (far - near);
-            float thickness = 0.000001*len/float(samples);
+            float thickness = len/float(samples);
 
             int start = 0;
             int end = samples;
@@ -253,7 +253,6 @@ func (vr *VolumetricRenderer) Init() {
     focus.Uniform3f(0.0, 0.0, 0.0)
 
     size := vr.program.GetUniformLocation("size")
-    //size.Uniform3f(3.02638e+7, 3.02638e+7, 3.02638e+7)
     size.Uniform3f(vr.width, vr.height, vr.depth)
 
     angle := vr.program.GetUniformLocation("angle")
