@@ -61,7 +61,7 @@ type VolumetricRenderer struct {
     dist float32
 }
 
-func CreateVolumetricRenderer(sf *ScalarField, min float32, max float32, dist float32) *VolumetricRenderer {
+func CreateVolumetricRenderer(sf *ScalarField, min float32, max float32, sampleCount int, dist float32) *VolumetricRenderer {
     var err error;
     vr := new(VolumetricRenderer)
     vr.scalarField = sf
@@ -162,7 +162,7 @@ func CreateVolumetricRenderer(sf *ScalarField, min float32, max float32, dist fl
             vec4 color = vec4(0);
             float len = length(ray) * (far - near);
             for (int i=0; i<samples; i++) {
-                vec3 point = position + lerp3(ray*near, ray*far, float(i)/float(samples));
+                vec3 point = position + lerp3(ray*far, ray*near, float(i)/float(samples));
                 float value = sample(point);
                 if (value != 0.0) {
                     color = mix(color, transferFunction(value), 0.000001*len/float(samples));
@@ -216,10 +216,10 @@ func CreateVolumetricRenderer(sf *ScalarField, min float32, max float32, dist fl
     near.Uniform1f(7.5e+7)
 
     far := vr.program.GetUniformLocation("far")
-    far.Uniform1f(1.4e+8)
+    far.Uniform1f(1.8e+8)
 
     samples := vr.program.GetUniformLocation("samples")
-    samples.Uniform1i(400)
+    samples.Uniform1i(sampleCount)
 
     return vr
 }

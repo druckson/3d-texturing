@@ -30,7 +30,6 @@ func readFile(path string) []byte {
 
 func readVTKTextData(lines []string) ([]float32) {
     data := strings.Split(strings.TrimRight(strings.Join(lines, ""), " "), " ");
-
     nums := make([]float32, len(data))
 
     for i := 0; i<len(data); i++ {
@@ -65,7 +64,7 @@ func readVTKFile(path string) (*ScalarField, error) {
         if line == "ASCII" {
             fmt.Printf("Ascii file\n")
             bin = false
-        } else if line == "ASCII" {
+        } else if line == "BINARY" {
             fmt.Printf("Binary file\n")
             bin = true
         } else if len(line) >= 12 && line[:12] == "LOOKUP_TABLE" {
@@ -85,7 +84,7 @@ func readVTKFile(path string) (*ScalarField, error) {
 
     var data []float32
     if bin {
-        data = readVTKBinaryData(lines[i:])
+        data = readVTKBinaryData(lines[i+1:])
     } else {
         data = readVTKTextData(lines[i+1:])
     }
