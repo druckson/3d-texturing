@@ -58,10 +58,21 @@ type VolumetricRenderer struct {
     volumeDataTexture gl.Texture
     transferFunctionTexture gl.Texture
     scalarField *ScalarField
+
+    samples int
+    width float32
+    height float32
+    depth float32
     dist float32
+    near float32
+    far float32
+    min float32
+    max float32
 }
 
-func CreateVolumetricRenderer(sf *ScalarField, min float32, max float32, sampleCount int, dist float32) *VolumetricRenderer {
+func CreateVolumetricRenderer(sf *ScalarField, min float32, max float32, samples int,
+                              width float32, height float32, depth float32,
+                              dist float32, near float32, far float32) *VolumetricRenderer {
     var err error;
     vr := new(VolumetricRenderer)
     vr.scalarField = sf
@@ -103,13 +114,12 @@ func CreateVolumetricRenderer(sf *ScalarField, min float32, max float32, sampleC
         uniform int screenHeight;
         uniform int samples;
 
+        uniform vec3 size;
 
         uniform float test;
 
         float sample(vec3 pos) {
-            float offs = 3.02638 * pow(10.0, 7.0);
-            float mult = offs * 2.0;
-            pos = (pos + vec3(offs)) / mult;
+            pos = pos / size / 2.0 + vec3(0.5);
             if ((pos.r > 0.0) && (pos.r < 1.0) &&
                 (pos.g > 0.0) && (pos.g < 1.0) &&
                 (pos.b > 0.0) && (pos.b < 1.0))
@@ -196,13 +206,6 @@ func CreateVolumetricRenderer(sf *ScalarField, min float32, max float32, sampleC
                 float value = sample(point);
                 color = mix(color, transferFunction(value), thickness);
             }
-
-            //vec4 color = vec4(0);
-            //for (int i=samples-1; i>=0; i--) {
-            //    vec3 point = position + lerp3(ray*far, ray*near, float(i)/float(samples));
-            //    float value = sample(point);
-            //    color = mix(color, transferFunction(value), thickness);
-            //}
             return color;
         }
 
@@ -214,29 +217,34 @@ func CreateVolumetricRenderer(sf *ScalarField, min float32, max float32, sampleC
         }
     `)
 
+    vr.samples = samples
+    vr.width = width
+    vr.height = height
+    vr.depth = depth
     vr.dist = dist
+    vr.near = near
+    vr.far = far
+    vr.min = min
+    vr.max = max
 
-
-    //dim := 256
-    //vr.volumeDataTexture, _ = readTexture3DBinary(dim, dim, dim, "astro512.txt")
-
-    //dim := 64
-    //vr.volumeDataTexture, _ = readTexture3D(dim, dim, dim, "astro64.txt")
     vr.volumeDataTexture, _ = sf.CreateTexture()
 
+    vr.Init()
+
+    return vr
+}
+
+func (vr *VolumetricRenderer) Init() {
     volumeData := vr.program.GetUniformLocation("volumeData")
     volumeData.Uniform1i(0)
 
     vr.transferFunctionTexture = SetupTransferFunction()
 
     transferFunctionMin := vr.program.GetUniformLocation("transferFunctionMin")
-    transferFunctionMin.Uniform1f(min)
+    transferFunctionMin.Uniform1f(vr.min)
 
     transferFunctionMax := vr.program.GetUniformLocation("transferFunctionMax")
-    transferFunctionMax.Uniform1f(max)
-
-    position := vr.program.GetUniformLocation("position")
-    position.Uniform3f(-8.25e+7, -3.45e+7, 3.35e+7)
+    transferFunctionMax.Uniform1f(vr.max)
 
     up := vr.program.GetUniformLocation("up")
     up.Uniform3f(0.0, -1.0, 0.0)
@@ -244,19 +252,21 @@ func CreateVolumetricRenderer(sf *ScalarField, min float32, max float32, sampleC
     focus := vr.program.GetUniformLocation("focus")
     focus.Uniform3f(0.0, 0.0, 0.0)
 
+    size := vr.program.GetUniformLocation("size")
+    //size.Uniform3f(3.02638e+7, 3.02638e+7, 3.02638e+7)
+    size.Uniform3f(vr.width, vr.height, vr.depth)
+
     angle := vr.program.GetUniformLocation("angle")
     angle.Uniform1f(30.0)
 
     near := vr.program.GetUniformLocation("near")
-    near.Uniform1f(7.5e+7)
+    near.Uniform1f(vr.near)
 
     far := vr.program.GetUniformLocation("far")
-    far.Uniform1f(1.8e+8)
+    far.Uniform1f(vr.far)
 
     samples := vr.program.GetUniformLocation("samples")
-    samples.Uniform1i(sampleCount)
-
-    return vr
+    samples.Uniform1i(vr.samples)
 }
 
 func (vr *VolumetricRenderer) SetSize(w int, h int) {
@@ -281,7 +291,6 @@ func (vr *VolumetricRenderer) Draw() {
     test := vr.program.GetUniformLocation("test")
     test.Uniform1f(float32(math.Sin(t) + 1.0) * 0.5)
     position := vr.program.GetUniformLocation("position")
-    //dist := math.Sqrt(8.25e+7*8.25e+7 + 3.45e+7*3.45e+7 + 3.35e+7*3.35e+7)
     position.Uniform3f(vr.dist*float32(math.Sin(t)), 0, vr.dist*float32(math.Cos(t)))
 
     gl.ActiveTexture(gl.TEXTURE0)
