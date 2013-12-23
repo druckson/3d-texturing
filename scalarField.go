@@ -1,6 +1,7 @@
 package main
 
 import "errors"
+import "math"
 import "fmt"
 
 type ScalarField struct {
@@ -16,9 +17,9 @@ func NewScalarField(w int, h int, d int) (*ScalarField, error) {
     }
 
     sf := new(ScalarField)
-    sf.width = w
-    sf.height = h
-    sf.depth = d
+    sf.width = int(math.Pow(2.0, math.Floor(math.Log2(float64(w)))))
+    sf.height = int(math.Pow(2.0, math.Floor(math.Log2(float64(h)))))
+    sf.depth = int(math.Pow(2.0, math.Floor(math.Log2(float64(d)))))
     sf.data = make([]float32, w*h*d)
     return sf, nil
 }
@@ -37,7 +38,9 @@ func (sf *ScalarField) index(x int, y int, z int) (int, error) {
     if  x >= 0 && x < sf.width &&
         y >= 0 && y < sf.height &&
         z >= 0 && z < sf.depth {
-        return x*sf.height*sf.depth + y*sf.depth + z, nil
+        //return x*sf.height*sf.depth + y*sf.depth + z, nil
+        //return z*sf.width*sf.height + y*sf.depth + x, nil
+        return z*sf.width*sf.height + y*sf.width + x, nil
     }
     return 0.0, errors.New("ScalarField: Coordinates out of bounds")
 }
