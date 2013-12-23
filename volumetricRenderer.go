@@ -247,7 +247,7 @@ func (vr *VolumetricRenderer) Init() {
     transferFunctionMax.Uniform1f(vr.max)
 
     up := vr.program.GetUniformLocation("up")
-    up.Uniform3f(0.0, -1.0, 0.0)
+    up.Uniform3f(0.0, 1.0, 0.0)
 
     focus := vr.program.GetUniformLocation("focus")
     focus.Uniform3f(0.0, 0.0, 0.0)
@@ -286,7 +286,7 @@ func (vr *VolumetricRenderer) Draw() {
     gl.MatrixMode(gl.MODELVIEW)
     gl.LoadIdentity()
 
-    t += 0.03
+    t += 0.01
     test := vr.program.GetUniformLocation("test")
     test.Uniform1f(float32(math.Sin(t) + 1.0) * 0.5)
     position := vr.program.GetUniformLocation("position")
