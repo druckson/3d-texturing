@@ -1,8 +1,8 @@
-test: main.go volumetricRenderer.go util.go vtk.go pnm.go scalarField.go gl.go
-	go build -o test
+viewer: main.go volumetricRenderer.go util.go vtk.go pnm.go scalarField.go gl.go
+	go build -o viewer
 
-run: test
-	./test
+run: viewer
+	./viewer
 
 clean:
-	rm test
+	rm viewer
