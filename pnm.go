@@ -4,7 +4,7 @@ import ("image"
         "image/png"
         "os")
 
-func readImage(path string) image.Image {
+func readPNMImage(path string) image.Image {
     file, err := os.Open(path)
     if err != nil {
         panic("Failed to read PNM file "+err.Error())
@@ -19,13 +19,13 @@ func readImage(path string) image.Image {
 }
 
 func readPNMFiles(paths []string) (*ScalarField, error) {
-    img := readImage(paths[0])
+    img := readPNMImage(paths[0])
     bounds := img.Bounds()
     sf, _ := NewScalarField(bounds.Dx(), bounds.Dy(), len(paths))
 
     max := float32(0.0)
     for i, path := range(paths) {
-        img := readImage(path)
+        img := readPNMImage(path)
         bounds := img.Bounds()
 
         for x:=bounds.Min.X; x<bounds.Max.X; x++ {
