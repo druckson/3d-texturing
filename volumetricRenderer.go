@@ -68,6 +68,9 @@ type VolumetricRenderer struct {
     far float32
     min float32
     max float32
+
+    perspectiveX float64
+    perspectiveY float64
 }
 
 func CreateVolumetricRenderer(sf *ScalarField, min float32, max float32, samples int,
@@ -158,7 +161,25 @@ func (vr *VolumetricRenderer) SetSize(w int, h int) {
     gl.Viewport(0, 0, w, h)
 }
 
-var t float64 = 0.0;
+func (vr *VolumetricRenderer) Update(dt float64) {
+    speed := dt * 5.0
+    if  vr.window.GetKey(glfw.KeyLeft) == glfw.Press ||
+        vr.window.GetKey(glfw.KeyLeft) == glfw.Repeat {
+        vr.perspectiveX -= speed
+    }
+    if  vr.window.GetKey(glfw.KeyRight) == glfw.Press ||
+        vr.window.GetKey(glfw.KeyRight) == glfw.Repeat {
+        vr.perspectiveX += speed
+    }
+    if  vr.window.GetKey(glfw.KeyUp) == glfw.Press ||
+        vr.window.GetKey(glfw.KeyUp) == glfw.Repeat {
+        vr.perspectiveY -= speed * 20.0
+    }
+    if  vr.window.GetKey(glfw.KeyDown) == glfw.Press ||
+        vr.window.GetKey(glfw.KeyDown) == glfw.Repeat {
+        vr.perspectiveY += speed * 20.0
+    }
+}
 
 func (vr *VolumetricRenderer) Draw() {
     gl.Clear(gl.COLOR_BUFFER_BIT)
@@ -168,11 +189,11 @@ func (vr *VolumetricRenderer) Draw() {
     gl.MatrixMode(gl.MODELVIEW)
     gl.LoadIdentity()
 
-    t += 0.01
     test := vr.program.GetUniformLocation("test")
-    test.Uniform1f(float32(math.Sin(t) + 1.0) * 0.5)
+    test.Uniform1f(float32(math.Sin(vr.perspectiveX) + 1.0) * 0.5)
     position := vr.program.GetUniformLocation("position")
-    position.Uniform3f(vr.dist*float32(math.Sin(t)), 0, vr.dist*float32(math.Cos(t)))
+    position.Uniform3f((vr.dist+float32(vr.perspectiveY))*float32(math.Sin(vr.perspectiveX)), 0,
+                       (vr.dist+float32(vr.perspectiveY))*float32(math.Cos(vr.perspectiveX)))
 
     gl.ActiveTexture(gl.TEXTURE0)
 
