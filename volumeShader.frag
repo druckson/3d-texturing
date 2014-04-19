@@ -113,5 +113,6 @@ void main(void) {
     vec3 ray = getRay(gl_TexCoord[0].s*float(screenWidth),
                       gl_TexCoord[0].t*float(screenHeight),
                       screenWidth, screenHeight);
-    gl_FragColor = sampleRay(ray);
+    vec4 color = sampleRay(ray);
+    gl_FragColor = vec4(pow(color.r, 1.0/2.2), pow(color.g, 1.0/2.2), pow(color.b, 1.0/2.2), color.a);
 }
