@@ -2,6 +2,10 @@ package main
 
 import ("github.com/go-gl/gl")
 
+func lerp(value1 float32, value2 float32, t float32) float32 {
+    return value1 + (t * (value2 - value1));
+}
+
 func SetupTransferFunction() (gl.Texture) {
     texture := gl.GenTexture()
     texture.Bind(gl.TEXTURE_1D)
@@ -27,9 +31,10 @@ func SetupTransferFunction() (gl.Texture) {
                           (255.0*float32(controlPointPositions[end]) -
                            255.0*float32(controlPointPositions[start]))
 
-        colors[4*i+0] = float32(controlPointColors[3*start+0])/255.0 + (t * (float32(controlPointColors[3*end+0])/255.0 - float32(controlPointColors[3*start+0])/255.0))
-        colors[4*i+1] = float32(controlPointColors[3*start+1])/255.0 + (t * (float32(controlPointColors[3*end+1])/255.0 - float32(controlPointColors[3*start+1])/255.0))
-        colors[4*i+2] = float32(controlPointColors[3*start+2])/255.0 + (t * (float32(controlPointColors[3*end+2])/255.0 - float32(controlPointColors[3*start+2])/255.0))
+        colors[4*i+0] = lerp(float32(controlPointColors[3*start+0])/255.0, float32(controlPointColors[3*end+0])/255.0, t)
+        colors[4*i+1] = lerp(float32(controlPointColors[3*start+1])/255.0, float32(controlPointColors[3*end+1])/255.0, t)
+        colors[4*i+2] = lerp(float32(controlPointColors[3*start+2])/255.0, float32(controlPointColors[3*end+2])/255.0, t)
+
         colors[4*i+3] = float32(opacities[i])/255.0
     }
 
