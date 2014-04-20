@@ -2,7 +2,6 @@ package main
 
 import ("github.com/go-gl/gl"
         glfw "github.com/go-gl/glfw3"
-        "fmt"
         "math")
 
 type VolumetricRenderer struct {
@@ -19,30 +18,9 @@ type VolumetricRenderer struct {
     perspectiveY float64
 }
 
-func CreateVolumetricRenderer(sf *ScalarField, conf *Configuration) *VolumetricRenderer {
-    var err error;
+func CreateVolumetricRenderer(manager *GlfwManager, sf *ScalarField, conf *Configuration) *VolumetricRenderer {
     vr := new(VolumetricRenderer)
     vr.scalarField = sf
-    glfw.SetErrorCallback(
-        func(err glfw.ErrorCode, desc string) {
-            fmt.Printf("%v: %v\n", err, desc)
-        })
-
-    if !glfw.Init() {
-        panic("Can't init glfw!")
-    }
-
-    vr.window, err = glfw.CreateWindow(300, 300, "Test", nil, nil)
-    if err != nil {
-        panic(err)
-    }
-
-    vr.window.SetSizeCallback(
-        func(window *glfw.Window, width int, height int) {
-            vr.SetSize(width, height)
-        })
-    vr.window.MakeContextCurrent()
-    gl.Init()
 
     vr.program, _ = createProgram(`
         void main() {
@@ -53,6 +31,14 @@ func CreateVolumetricRenderer(sf *ScalarField, conf *Configuration) *VolumetricR
 
     vr.conf = conf
     vr.volumeDataTexture, _ = sf.CreateTexture()
+
+    manager.SubscribeSetSize(func(w int, h int) {
+        vr.SetSize(w, h)
+    })
+
+    manager.SubscribeDraw(func() {
+        vr.Draw()
+    })
 
     vr.Init()
 
@@ -110,24 +96,24 @@ func (vr *VolumetricRenderer) Zoom(amount float64) {
 }
 
 func (vr *VolumetricRenderer) Update(dt float64) {
-    rotateSpeed := dt * 5.0
-    zoomSpeed := dt * 100.0
-    if  vr.window.GetKey(glfw.KeyLeft) == glfw.Press ||
-        vr.window.GetKey(glfw.KeyLeft) == glfw.Repeat {
-        vr.Rotate(-rotateSpeed)
-    }
-    if  vr.window.GetKey(glfw.KeyRight) == glfw.Press ||
-        vr.window.GetKey(glfw.KeyRight) == glfw.Repeat {
-        vr.Rotate(rotateSpeed)
-    }
-    if  vr.window.GetKey(glfw.KeyUp) == glfw.Press ||
-        vr.window.GetKey(glfw.KeyUp) == glfw.Repeat {
-        vr.Zoom(-zoomSpeed)
-    }
-    if  vr.window.GetKey(glfw.KeyDown) == glfw.Press ||
-        vr.window.GetKey(glfw.KeyDown) == glfw.Repeat {
-        vr.Zoom(zoomSpeed)
-    }
+    //rotateSpeed := dt * 5.0
+    //zoomSpeed := dt * 100.0
+    //if  vr.window.GetKey(glfw.KeyLeft) == glfw.Press ||
+    //    vr.window.GetKey(glfw.KeyLeft) == glfw.Repeat {
+    //    vr.Rotate(-rotateSpeed)
+    //}
+    //if  vr.window.GetKey(glfw.KeyRight) == glfw.Press ||
+    //    vr.window.GetKey(glfw.KeyRight) == glfw.Repeat {
+    //    vr.Rotate(rotateSpeed)
+    //}
+    //if  vr.window.GetKey(glfw.KeyUp) == glfw.Press ||
+    //    vr.window.GetKey(glfw.KeyUp) == glfw.Repeat {
+    //    vr.Zoom(-zoomSpeed)
+    //}
+    //if  vr.window.GetKey(glfw.KeyDown) == glfw.Press ||
+    //    vr.window.GetKey(glfw.KeyDown) == glfw.Repeat {
+    //    vr.Zoom(zoomSpeed)
+    //}
 }
 
 func (vr *VolumetricRenderer) Draw() {
@@ -169,13 +155,9 @@ func (vr *VolumetricRenderer) Draw() {
     gl.TexCoord2f(1, 0)
     gl.Vertex2f(  1,-1)
     gl.End()
-
-    vr.window.SwapBuffers()
-    glfw.PollEvents()
 }
 
 func (vr *VolumetricRenderer) Destroy() {
     vr.volumeDataTexture.Delete()
-    vr.window.Destroy()
-    glfw.Terminate()
+    //vr.window.Destroy()
 }
