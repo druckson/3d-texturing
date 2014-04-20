@@ -5,16 +5,6 @@ import ("github.com/go-gl/gl"
         "fmt"
         "math")
 
-var _vr *VolumetricRenderer
-
-func ErrorCallback(err glfw.ErrorCode, desc string) {
-    fmt.Printf("%v: %v\n", err, desc)
-}
-
-func SetWindowSize(window *glfw.Window, width int, height int) {
-    _vr.SetSize(width, height)
-}
-
 type VolumetricRenderer struct {
     window *glfw.Window
     program gl.Program
@@ -33,8 +23,10 @@ func CreateVolumetricRenderer(sf *ScalarField, conf *Configuration) *VolumetricR
     var err error;
     vr := new(VolumetricRenderer)
     vr.scalarField = sf
-    _vr = vr
-    glfw.SetErrorCallback(ErrorCallback)
+    glfw.SetErrorCallback(
+        func(err glfw.ErrorCode, desc string) {
+            fmt.Printf("%v: %v\n", err, desc)
+        })
 
     if !glfw.Init() {
         panic("Can't init glfw!")
@@ -45,7 +37,10 @@ func CreateVolumetricRenderer(sf *ScalarField, conf *Configuration) *VolumetricR
         panic(err)
     }
 
-    vr.window.SetSizeCallback(SetWindowSize)
+    vr.window.SetSizeCallback(
+        func(window *glfw.Window, width int, height int) {
+            vr.SetSize(width, height)
+        })
     vr.window.MakeContextCurrent()
     gl.Init()
 
