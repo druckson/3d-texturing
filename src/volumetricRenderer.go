@@ -95,27 +95,6 @@ func (vr *VolumetricRenderer) Zoom(amount float64) {
     vr.perspectiveY += amount
 }
 
-func (vr *VolumetricRenderer) Update(dt float64) {
-    //rotateSpeed := dt * 5.0
-    //zoomSpeed := dt * 100.0
-    //if  vr.window.GetKey(glfw.KeyLeft) == glfw.Press ||
-    //    vr.window.GetKey(glfw.KeyLeft) == glfw.Repeat {
-    //    vr.Rotate(-rotateSpeed)
-    //}
-    //if  vr.window.GetKey(glfw.KeyRight) == glfw.Press ||
-    //    vr.window.GetKey(glfw.KeyRight) == glfw.Repeat {
-    //    vr.Rotate(rotateSpeed)
-    //}
-    //if  vr.window.GetKey(glfw.KeyUp) == glfw.Press ||
-    //    vr.window.GetKey(glfw.KeyUp) == glfw.Repeat {
-    //    vr.Zoom(-zoomSpeed)
-    //}
-    //if  vr.window.GetKey(glfw.KeyDown) == glfw.Press ||
-    //    vr.window.GetKey(glfw.KeyDown) == glfw.Repeat {
-    //    vr.Zoom(zoomSpeed)
-    //}
-}
-
 func (vr *VolumetricRenderer) Draw() {
     gl.Clear(gl.COLOR_BUFFER_BIT)
 

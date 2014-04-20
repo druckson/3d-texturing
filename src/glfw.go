@@ -8,6 +8,7 @@ type GlfwManager struct {
     Window *glfw.Window
     resizeCallbacks []func(int, int)
     drawCallbacks []func()
+    updateCallbacks []func(float64)
 }
 
 func CreateGlfwManager() *GlfwManager {
@@ -15,6 +16,7 @@ func CreateGlfwManager() *GlfwManager {
     manager := new(GlfwManager)
     manager.resizeCallbacks = make([]func(int, int), 0, 10)
     manager.drawCallbacks = make([]func(), 0, 10)
+    manager.updateCallbacks = make([]func(float64), 0, 10)
 
     glfw.SetErrorCallback(
         func(err glfw.ErrorCode, desc string) {
@@ -48,11 +50,21 @@ func (manager *GlfwManager) SubscribeDraw(cb func()) {
     manager.drawCallbacks = append(manager.drawCallbacks, cb)
 }
 
+func (manager *GlfwManager) SubscribeUpdate(cb func(float64)) {
+    manager.updateCallbacks = append(manager.updateCallbacks, cb)
+}
+
 func (manager *GlfwManager) SetSize(w int, h int) {
     for _, f := range manager.resizeCallbacks {
         f(w, h)
     }
     gl.Viewport(0, 0, w, h)
+}
+
+func (manager *GlfwManager) Update(dt float64) {
+    for _, f := range manager.updateCallbacks {
+        f(dt)
+    }
 }
 
 func (manager *GlfwManager) Draw() {
@@ -64,5 +76,6 @@ func (manager *GlfwManager) Draw() {
 }
 
 func (manager *GlfwManager) Destroy() {
+    manager.Window.Destroy()
     glfw.Terminate()
 }

@@ -11,11 +11,11 @@ func main() {
         sf, _ := readPNMFiles(conf.Files)
         manager := CreateGlfwManager()
         vr := CreateVolumetricRenderer(manager, sf, conf)
+        controller := CreateCameraController(manager, vr)
         defer vr.Destroy()
 
         for {
-            //vr.Update(0.01)
-            //vr.Draw()
+            controller.Update(0.01)
             manager.Draw()
         }
     } else {
