@@ -25,24 +25,11 @@ type VolumetricRenderer struct {
 
     conf *Configuration
 
-    //samples int
-    //width float32
-    //height float32
-    //depth float32
-    //dist float32
-    //near float32
-    //far float32
-    //min float32
-    //max float32
-
     perspectiveX float64
     perspectiveY float64
 }
 
 func CreateVolumetricRenderer(sf *ScalarField, conf *Configuration) *VolumetricRenderer {
-    //min float32, max float32, samples int,
-    //                              width float32, height float32, depth float32,
-    //                              dist float32, near float32, far float32)  {
     var err error;
     vr := new(VolumetricRenderer)
     vr.scalarField = sf
@@ -70,16 +57,6 @@ func CreateVolumetricRenderer(sf *ScalarField, conf *Configuration) *VolumetricR
     `, string(readFile("volumeShader.frag")))
 
     vr.conf = conf
-    // vr.samples = samples
-    // vr.width = width
-    // vr.height = height
-    // vr.depth = depth
-    // vr.dist = dist
-    // vr.near = near
-    // vr.far = far
-    // vr.min = min
-    // vr.max = max
-
     vr.volumeDataTexture, _ = sf.CreateTexture()
 
     vr.Init()
@@ -129,23 +106,32 @@ func (vr *VolumetricRenderer) SetSize(w int, h int) {
     gl.Viewport(0, 0, w, h)
 }
 
+func (vr *VolumetricRenderer) Rotate(amount float64) {
+    vr.perspectiveX += amount
+}
+
+func (vr *VolumetricRenderer) Zoom(amount float64) {
+    vr.perspectiveY += amount
+}
+
 func (vr *VolumetricRenderer) Update(dt float64) {
-    speed := dt * 5.0
+    rotateSpeed := dt * 5.0
+    zoomSpeed := dt * 100.0
     if  vr.window.GetKey(glfw.KeyLeft) == glfw.Press ||
         vr.window.GetKey(glfw.KeyLeft) == glfw.Repeat {
-        vr.perspectiveX -= speed
+        vr.Rotate(-rotateSpeed)
     }
     if  vr.window.GetKey(glfw.KeyRight) == glfw.Press ||
         vr.window.GetKey(glfw.KeyRight) == glfw.Repeat {
-        vr.perspectiveX += speed
+        vr.Rotate(rotateSpeed)
     }
     if  vr.window.GetKey(glfw.KeyUp) == glfw.Press ||
         vr.window.GetKey(glfw.KeyUp) == glfw.Repeat {
-        vr.perspectiveY -= speed * 20.0
+        vr.Zoom(-zoomSpeed)
     }
     if  vr.window.GetKey(glfw.KeyDown) == glfw.Press ||
         vr.window.GetKey(glfw.KeyDown) == glfw.Repeat {
-        vr.perspectiveY += speed * 20.0
+        vr.Zoom(zoomSpeed)
     }
 }
 
