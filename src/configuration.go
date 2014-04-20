@@ -2,6 +2,7 @@ package main
 
 import (
     "os"
+    "fmt"
     "path"
     "encoding/json"
 )
@@ -16,11 +17,10 @@ type Configuration struct {
     Dist float32
     Near float32
     Far float32
-    Paths []string
+    Files []string
 }
 
 func CreateConfiguration(configFile string) *Configuration {
-
     fileinfo, _ := os.Stat(configFile)
     file, _ := os.Open(configFile)
     defer file.Close()
@@ -32,22 +32,11 @@ func CreateConfiguration(configFile string) *Configuration {
     var conf *Configuration
     json.Unmarshal(data, &conf)
 
+    fmt.Printf("File: %f\n", conf.Min)
     base := path.Dir(configFile)
-    for i, filePath := range conf.Paths {
-        conf.Paths[i] = path.Join(base, filePath)
+    for i, filePath := range conf.Files {
+        conf.Files[i] = path.Join(base, filePath)
     }
 
     return conf
-}
-
-func CreateRenderer(configFile string) *VolumetricRenderer {
-    conf := CreateConfiguration(configFile);
-
-    sf, _ := readPNMFiles(conf.Paths)
-    vr := CreateVolumetricRenderer(sf,
-        conf.Min, conf.Max, conf.Samples,
-        conf.Width, conf.Height, conf.Depth,
-        conf.Dist, conf.Near, conf.Far)
-
-    return vr
 }
